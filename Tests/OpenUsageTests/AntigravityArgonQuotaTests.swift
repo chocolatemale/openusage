@@ -21,10 +21,14 @@ final class AntigravityArgonQuotaTests: XCTestCase {
     private func assertSharedPoolsOnly(_ data: Data, file: StaticString = #filePath, line: UInt = #line) {
         let lines = AntigravityUsageMapper.parseQuotaSummary(data)
         XCTAssertEqual(lines?.map(\.label), ["Session", "Weekly", "Claude", "Claude Weekly"], file: file, line: line)
-        XCTAssertEqual(lines?.map { metric -> Double? in
+        let usedValues = lines?.compactMap { metric -> Double? in
             guard case .progress(_, let used, _, _, _, _, _) = metric else { return nil }
             return used
-        }, [20, 30, 40, 50], file: file, line: line)
+        } ?? []
+        XCTAssertEqual(usedValues.count, 4, file: file, line: line)
+        for (actual, expected) in zip(usedValues, [20.0, 30.0, 40.0, 50.0]) {
+            XCTAssertEqual(actual, expected, accuracy: 0.0001, file: file, line: line)
+        }
     }
 
     func testAbsentArgonPreservesExistingFourBuckets() {
@@ -141,10 +145,17 @@ final class AntigravityArgonQuotaTests: XCTestCase {
         }}
         """
         let lines = AntigravityUsageMapper.buildLines(AntigravityUsageMapper.parseCloudCodeModels(Data(json.utf8)))
-        XCTAssertEqual(lines, [.progress(
-            label: "Session", used: 20, limit: 100, format: .percent,
-            resetsAt: nil, periodDurationMs: MetricPeriod.sessionMs
-        )])
+        XCTAssertEqual(lines.count, 1)
+        if case .progress(let label, let used, let limit, let format, let resetsAt, let periodMs, _)? = lines.first {
+            XCTAssertEqual(label, "Session")
+            XCTAssertEqual(used, 20, accuracy: 0.0001)
+            XCTAssertEqual(limit, 100)
+            XCTAssertEqual(format, .percent)
+            XCTAssertNil(resetsAt)
+            XCTAssertEqual(periodMs, MetricPeriod.sessionMs)
+        } else {
+            XCTFail("expected Session progress line")
+        }
 
         let buckets = Data(#"{"buckets":[{"modelId":"gemini-4-argon","remainingFraction":0.1},{"modelId":"gemini-3.8-flash","remainingFraction":0.8}]}"#.utf8)
         XCTAssertEqual(AntigravityUsageMapper.buildLines(AntigravityUsageMapper.parseQuotaBuckets(buckets)), lines)

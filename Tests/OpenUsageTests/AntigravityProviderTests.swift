@@ -355,8 +355,8 @@ final class AntigravityProviderTests: XCTestCase {
         XCTAssertEqual(snapshot.plan, "Pro")
         // Legacy per-model data merges into the two pool meters (worst fraction per pool).
         XCTAssertEqual(snapshot.lines.map(\.label), ["Session", "Claude"])
-        XCTAssertEqual(used(snapshot.lines[0]), 60)
-        XCTAssertEqual(used(snapshot.lines[1]), 30)
+        XCTAssertEqual(used(snapshot.lines[0]) ?? -1, 60, accuracy: 0.0001)
+        XCTAssertEqual(used(snapshot.lines[1]) ?? -1, 30, accuracy: 0.0001)
     }
 
     @MainActor

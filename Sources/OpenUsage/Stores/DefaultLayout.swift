@@ -21,7 +21,7 @@ enum DefaultLayout {
     }
 
     static let metricIDs: [String] = [
-        "antigravity.geminiPro", "antigravity.geminiWeekly", "antigravity.argonWeekly",
+        "antigravity.geminiPro", "antigravity.geminiWeekly",
         "antigravity.claude", "antigravity.claudeWeekly",
         "antigravity.trend", "antigravity.today", "antigravity.yesterday", "antigravity.last30",
 

@@ -50,4 +50,47 @@ final class GeminiArgonPricingTests: XCTestCase {
         // $2 input + $0.50 cache writes + $0.02 cache reads + $5 output.
         XCTAssertEqual(cost, 7.52, accuracy: 0.000_001)
     }
+
+    func testBundledSupplementPricesGemini4HydrogenNeonCarbonAndTieredVariants() {
+        let cases: [(models: [String], canonical: String, expected: ModelRates)] = [
+            (
+                [
+                    "gemini-4-hydrogen", "gemini-4-hydrogen-low", "gemini-4-hydrogen-high",
+                    "gemini-4-hydrogen-tiered", "gemini-4-hydrogen-tiered-high",
+                    "Gemini 4 Hydrogen", "Gemini 4 Hydrogen (Low)", "Gemini 4 Hydrogen (High)"
+                ],
+                "gemini-4-hydrogen",
+                ModelRates(inputPerMillion: 1.5, outputPerMillion: 7.5, cacheWritePerMillion: 1.5, cacheReadPerMillion: 0.075)
+            ),
+            (
+                [
+                    "gemini-4-neon", "gemini-4-neon-medium", "gemini-4-neon-high", "gemini-4-neon-xhigh",
+                    "gemini-4-neon-tiered-xhigh",
+                    "Gemini 4 Neon", "Gemini 4 Neon (Medium)", "Gemini 4 Neon (High)", "Gemini 4 Neon (XHigh)"
+                ],
+                "gemini-4-neon",
+                ModelRates(inputPerMillion: 3.0, outputPerMillion: 15.0, cacheWritePerMillion: 3.0, cacheReadPerMillion: 0.15)
+            ),
+            (
+                [
+                    "gemini-4-carbon", "gemini-4-carbon-high", "gemini-4-carbon-tiered-high",
+                    "Gemini 4 Carbon", "Gemini 4 Carbon (High)", "Gemini 4 Carbon (XHigh)"
+                ],
+                "gemini-4-carbon",
+                ModelRates(inputPerMillion: 2.0, outputPerMillion: 10.0, cacheWritePerMillion: 2.0, cacheReadPerMillion: 0.1)
+            ),
+            (
+                ["Claude Opus 5.5 (Medium)", "Claude Opus 5.5 (High)"],
+                "claude-opus-5-5",
+                ModelRates(inputPerMillion: 4.0, outputPerMillion: 20.0, cacheWritePerMillion: 5.0, cacheReadPerMillion: 0.2, fastMultiplier: 2.0)
+            )
+        ]
+
+        for entry in cases {
+            for model in entry.models {
+                XCTAssertEqual(pricing.resolve(model: model), entry.expected, model)
+                XCTAssertEqual(pricing.supplement.canonicalName(for: model), entry.canonical, model)
+            }
+        }
+    }
 }

@@ -197,10 +197,10 @@ final class LocalLimitsAPITests: XCTestCase {
     }
 
     @MainActor
-    func testAntigravityArgonWeeklyExportsSeparatelyAndIsOmittedWhenAbsent() throws {
+    func testAntigravitySharedWeeklyExportsWithoutSeparateArgonResource() throws {
         let descriptors = AntigravityProvider().widgetDescriptors
         let reset = OpenUsageISO8601.date(from: "2026-07-20T01:39:30.000Z")!
-        var snapshot = ProviderSnapshot(
+        let snapshot = ProviderSnapshot(
             providerID: "antigravity",
             displayName: "Antigravity",
             plan: "Pro",
@@ -212,18 +212,9 @@ final class LocalLimitsAPITests: XCTestCase {
             ],
             refreshedAt: fetchedAt
         )
-        let argon = try limitResource("argonWeekly", snapshot: snapshot, descriptors: descriptors)
         let gemini = try limitResource("geminiWeekly", snapshot: snapshot, descriptors: descriptors)
-
-        XCTAssertEqual(argon["unit"] as? String, "percent")
-        XCTAssertEqual(argon["used"] as? Double, 75)
-        XCTAssertEqual(argon["remaining"] as? Double, 25)
-        XCTAssertEqual(argon["windowSeconds"] as? Double, 604_800)
-        XCTAssertEqual(argon["resetsAt"] as? String, OpenUsageISO8601.string(from: reset))
         XCTAssertEqual(gemini["used"] as? Double, 10)
 
-        // Older endpoints or accounts without the separate quota retain their existing resources.
-        snapshot.lines.removeAll { $0.label == "Argon Weekly" }
         let state = makeState(snapshot: snapshot, descriptors: descriptors)
         let root = try json(LocalUsageAPI.respond(method: "GET", path: "/v1/limits", state: state).body)
         let provider = try XCTUnwrap((root["providers"] as? [String: Any])?["antigravity"] as? [String: Any])
@@ -242,7 +233,7 @@ final class LocalLimitsAPITests: XCTestCase {
             "claude": ["session", "weekly", "sonnet", "fable", "extraUsage", "rateLimitResets"],
             "codex": ["session", "weekly", "spark", "sparkWeekly", "credits", "creditValue", "rateLimitResets"],
             "cursor": ["totalUsage", "grokBot", "autoUsage", "apiUsage", "onDemand", "requests", "credits"],
-            "antigravity": ["geminiSession", "geminiWeekly", "argonWeekly", "nonGeminiSession", "nonGeminiWeekly"],
+            "antigravity": ["geminiSession", "geminiWeekly", "nonGeminiSession", "nonGeminiWeekly"],
             "copilot": ["premiumCredits", "extraUsage", "orgCredits", "orgSpend", "chat", "completions"],
             "devin": ["daily", "weekly", "extraUsageBalance"],
             "grok": ["weekly"],

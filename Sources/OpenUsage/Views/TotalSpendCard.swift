@@ -336,16 +336,21 @@ struct TotalSpendRingContent: View {
                 .font(.system(size: density.supportingPointSize))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
-            Spacer(minLength: 8)
+                .truncationMode(.tail)
+            Spacer(minLength: 6)
             // Tokens always abbreviate in the legend (12.4M), matching spend rows elsewhere —
             // `.full` would spill every digit. Cost modes keep cents via `.row` / `.full`.
+            // Keep legend figures at a uniform font size so wide dollar totals never shrink.
             Text(formatValue(slice.displayAmount, style: legendValueStyle))
                 .font(.system(size: density.supportingPointSize, weight: .medium))
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(1)
         }
+        .contentShape(Rectangle())
+        .hoverTooltip(slice.provider.displayName)
     }
 
     /// Legend amounts: tokens always abbreviated; dollar modes keep exact cents like before.

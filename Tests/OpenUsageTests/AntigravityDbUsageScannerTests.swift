@@ -208,6 +208,17 @@ final class AntigravityDbUsageScannerTests: XCTestCase {
         XCTAssertEqual(points.last?.value, 1_900_000)
     }
 
+    func testGemini4TieredAndDisplayLabelCandidatesResolveCleanly() {
+        XCTAssertEqual(
+            AntigravityDbUsageScanner.modelCandidates(id: "gemini-4-hydrogen-tiered-high", label: "Gemini 4 Hydrogen (High)"),
+            ["gemini-4-hydrogen-high", "Gemini 4 Hydrogen (High)"]
+        )
+        XCTAssertEqual(
+            AntigravityDbUsageScanner.modelCandidates(id: "gemini-default", label: "Gemini 4 Neon (XHigh)"),
+            ["Gemini 4 Neon (XHigh)", "gemini-default"]
+        )
+    }
+
     func testReusesHistoryAndReadsOnlyRowsAddedToDatabaseOrWAL() async throws {
         let fixture = try makeDatabaseDirectory()
         let timestamp = UInt64(now.timeIntervalSince1970) - 3_600

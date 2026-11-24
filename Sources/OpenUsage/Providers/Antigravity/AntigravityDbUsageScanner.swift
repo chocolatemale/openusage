@@ -273,7 +273,12 @@ actor AntigravityDbUsageScanner {
     /// and log the result with a `-tiered` suffix; that is the same model at the same rate, so it is
     /// shown under the base name.
     static func modelCandidates(id: String?, label: String?) -> [String] {
-        let id = id.map { $0.hasSuffix("-tiered") ? String($0.dropLast("-tiered".count)) : $0 }
+        let id = id.map { raw -> String in
+            if raw.hasSuffix("-tiered") {
+                return String(raw.dropLast("-tiered".count))
+            }
+            return raw.replacingOccurrences(of: "-tiered-", with: "-")
+        }
         let isPlaceholder = id?.hasSuffix("-default") ?? false
         return (isPlaceholder ? [label, id] : [id, label]).compactMap { $0 }
     }

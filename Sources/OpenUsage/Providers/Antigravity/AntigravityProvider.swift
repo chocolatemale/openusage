@@ -48,8 +48,6 @@ final class AntigravityProvider: ProviderRuntime {
                 .exportingLimit("geminiSession", unit: "percent"),
             .percent(id: AntigravityMetric.geminiWeeklyID, provider: provider, title: AntigravityMetric.weeklyLabel)
                 .exportingLimit("geminiWeekly", unit: "percent"),
-            .percent(id: AntigravityMetric.argonWeeklyID, provider: provider, title: AntigravityMetric.argonWeeklyLabel)
-                .exportingLimit("argonWeekly", unit: "percent"),
             .percent(id: AntigravityMetric.claudeID, provider: provider, title: AntigravityMetric.claudeLabel, sessionStartSignal: .zeroUsage)
                 .exportingLimit("nonGeminiSession", unit: "percent"),
             .percent(id: AntigravityMetric.claudeWeeklyID, provider: provider, title: AntigravityMetric.claudeWeeklyLabel)

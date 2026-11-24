@@ -36,14 +36,33 @@ struct PricingSupplement: Sendable {
         self.fallbackModels = fallbackModels
     }
 
+    /// Merges missing entries from `fallback` underneath `self` (`self` wins on shared keys and
+    /// evaluates its alias rules first). Ensures custom bundled models/aliases survive a newer
+    /// remote supplement feed while still adopting fresh upstream prices and fallback lists.
+    func mergingMissingEntries(from fallback: PricingSupplement) -> PricingSupplement {
+        let mergedMultipliers = fallback.fastMultipliers.merging(fastMultipliers) { _, preferred in preferred }
+        var mergedPricing = fallback.pricing.merging(pricing) { _, preferred in preferred }
+        for (model, var rates) in mergedPricing {
+            if rates.fastMultiplier == 1, let multiplier = mergedMultipliers[model], multiplier != 1 {
+                rates.fastMultiplier = multiplier
+                mergedPricing[model] = rates
+            }
+        }
+        let existingPatterns = Set(aliasRules.map(\.pattern.pattern))
+        let mergedAliasRules = aliasRules + fallback.aliasRules.filter { !existingPatterns.contains($0.pattern.pattern) }
+        return PricingSupplement(
+            pricing: mergedPricing,
+            fastMultipliers: mergedMultipliers,
+            aliasRules: mergedAliasRules,
+            updatedAt: updatedAt ?? fallback.updatedAt,
+            fallbackModels: fallback.fallbackModels.merging(fallbackModels) { _, preferred in preferred }
+        )
+    }
+
     /// Older feeds have no picker metadata. Keep bundled choices until the feed supplies them;
     /// an explicit empty list remains authoritative.
     func fillingMissingFallbackModels(from other: PricingSupplement) -> PricingSupplement {
-        PricingSupplement(
-            pricing: pricing, fastMultipliers: fastMultipliers, aliasRules: aliasRules,
-            updatedAt: updatedAt,
-            fallbackModels: other.fallbackModels.merging(fallbackModels) { _, preferred in preferred }
-        )
+        mergingMissingEntries(from: other)
     }
 
     /// The canonical pricing key for `model` per the alias rules, or nil when no rule matches.

@@ -177,8 +177,10 @@ final class AppContainer {
                 )
             }
         )
-        dataStore.onRefreshOutcome = { [weak telemetry] providerID, outcome, category, manual in
-            telemetry?.record(providerID: providerID, outcome: outcome, category: category, manual: manual)
+        if TelemetryConfig.isConfigured {
+            dataStore.onRefreshOutcome = { [weak telemetry] providerID, outcome, category, manual in
+                telemetry?.record(providerID: providerID, outcome: outcome, category: category, manual: manual)
+            }
         }
         self.telemetry = telemetry
         self.transparency = PopoverTransparencyStore()
@@ -280,10 +282,9 @@ final class AppContainer {
                 // and on every loop (not just on a fetch) so pace worsening from elapsed time alone still
                 // alerts even with the popover closed.
                 await dataStore.evaluateNotifications()
-                // Day-rollover beat: always emits `app_daily_active` once per local day; flushes
-                // prior-day provider rollups only while optional analytics are on. Runs on launch
-                // and every interval, so always-running instances still produce a daily-active signal.
-                telemetry.tick()
+                if TelemetryConfig.isConfigured {
+                    telemetry.tick()
+                }
                 await wakeSignal.waitForWake(timeout: RefreshSetting.interval)
             }
         }

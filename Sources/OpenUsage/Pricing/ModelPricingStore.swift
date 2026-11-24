@@ -112,10 +112,13 @@ actor ModelPricingStore {
         let bundled = decodedBundledSupplement()
         switch (cached, bundled) {
         case (let cached?, let bundled?):
-            // Bundled wins only when strictly newer, so the usual case (a feed ahead of the shipped
-            // file, or the two in step) keeps serving the cache.
-            let preferred = Self.isNewer(bundled.updatedAt, than: cached.updatedAt) ? bundled : cached
-            return preferred.fillingMissingFallbackModels(from: bundled)
+            // Whichever source carries the newer `updated_at` leads on shared entries, while
+            // unique models, multipliers, aliases, and unreplaced fallback lists from the other
+            // source survive the merge.
+            let bundledLeads = Self.isNewer(bundled.updatedAt, than: cached.updatedAt)
+            let preferred = bundledLeads ? bundled : cached
+            let fallback = bundledLeads ? cached : bundled
+            return preferred.mergingMissingEntries(from: fallback)
         case (let cached?, nil):
             return cached
         case (nil, let bundled?):

@@ -106,6 +106,55 @@ final class ModelPricingStoreTests: XCTestCase {
         await store.refreshNow()
     }
 
+    func testNewerRemoteSupplementUpdatesSharedRatesWhilePreservingCustomBundledModelsAndAliases() async throws {
+        try Data("""
+        {
+          "updated_at": "2099-01-01T00:00:00Z",
+          "pricing": {
+            "gemini-4-argon": {"input_per_million": 4.0, "output_per_million": 20.0},
+            "remote-only-model": {"input_per_million": 2.5, "output_per_million": 12.5}
+          },
+          "fast_multipliers": {"remote-only-model": 2.0},
+          "alias_rules": [
+            {"pattern": "^gemini-4-argon(?:-(?:trial|preview))?$", "canonical": "gemini-4-argon"}
+          ]
+        }
+        """.utf8).write(to: tempDir.appendingPathComponent("supplement.json"))
+
+        let store = ModelPricingStore(
+            http: RoutingHTTPClient(handler: { _ in throw URLError(.notConnectedToInternet) }),
+            cacheDirectory: tempDir,
+            bundledData: { name in
+                if name == "pricing_supplement" {
+                    return Data("""
+                    {
+                      "updated_at": "2026-10-16T23:28:56Z",
+                      "pricing": {
+                        "gemini-4-argon": {"input_per_million": 2.0, "output_per_million": 10.0},
+                        "gemini-4-hydrogen": {"input_per_million": 1.5, "output_per_million": 7.5}
+                      },
+                      "fast_multipliers": {"gemini-4-hydrogen": 2.0},
+                      "alias_rules": [
+                        {"pattern": "^gemini-4-argon(?:-(?:tiered|trial|preview))?-(?:low|high)$", "canonical": "gemini-4-argon"},
+                        {"pattern": "(?i)^Gemini 4 Hydrogen(?: \\\\([^)]*\\\\))?$", "canonical": "gemini-4-hydrogen"}
+                      ]
+                    }
+                    """.utf8)
+                }
+                return Self.bundledFixtures(name)
+            }
+        )
+
+        let pricing = await store.current()
+        XCTAssertEqual(pricing.resolve(model: "gemini-4-argon")?.inputPerMillion, 4.0, "newer remote rate wins on shared model")
+        XCTAssertEqual(pricing.resolve(model: "remote-only-model")?.inputPerMillion, 2.5)
+        XCTAssertEqual(pricing.resolve(model: "remote-only-model-fast")?.inputPerMillion, 5.0)
+        XCTAssertEqual(pricing.resolve(model: "gemini-4-hydrogen")?.inputPerMillion, 1.5, "custom bundled model survives newer remote supplement")
+        XCTAssertEqual(pricing.resolve(model: "gemini-4-hydrogen-fast")?.inputPerMillion, 3.0, "custom bundled fast multiplier survives")
+        XCTAssertEqual(pricing.resolve(model: "Gemini 4 Hydrogen (High)")?.inputPerMillion, 1.5, "custom bundled alias survives")
+        XCTAssertEqual(pricing.resolve(model: "gemini-4-argon-tiered-high")?.inputPerMillion, 4.0, "broader bundled alias falls through and resolves to updated remote rate")
+    }
+
     func testRefreshFetchesAllSourcesAndAppliesData() async throws {
         let (store, http) = makeStore(handler: { Self.respond(to: $0) })
         await store.refreshNow()
